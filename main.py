@@ -4,25 +4,22 @@ import numpy as np
 import pandas as pd
 
 df = pd.read_csv('breast_cancer.csv')
-
 X = df[['Clump Thickness', 'Uniformity of Cell Size', 'Uniformity of Cell Shape', 'Marginal Adhesion',
         'Single Epithelial Cell Size', 'Bare Nuclei', 'Bland Chromatin', 'Normal Nucleoli', 'Mitoses']].to_numpy()
 mu = X.mean()
 sigma = X.std()
 X = (X - mu) / sigma
-x_train = X[:X.shape[0] - 200, :]
-x_test = X[(X.shape[0] - 200):, :]
-
 Y = df['Class'].to_numpy()
-Y=Y/2-1
-y_train = Y[:Y.shape[0] - 200]
-y_test = Y[(Y.shape[0] - 200):]
+Y = Y / 2 - 1
 
-w_in = np.zeros_like(x_train[0])
+global w_in, w_in
+w_in = np.zeros_like(X[0])
 b_in = 0.0
+
 learning_rate = 0.001
 iterations = 1000
-regularization = 0.2
+regularization = 0.5
+k = 10
 
 
 def model(x, w, b):
@@ -88,8 +85,19 @@ def predict(x, w, b):
     return p
 
 
-w_out, b_out = gradient_descent(x_train, y_train, w_in, b_in, learning_rate, iterations, regularization)
-pr = predict(x_test, w_out, b_out)
-print(f'Output of predict: shape {pr.shape}, value {pr}')
-print('Train Accuracy: %f' % (np.mean(pr == y_test) * 100))
+def cross_validate(x, y, k, learning_rate, iterations, regularization):
+    n_samples = x.shape[0]
+    fold_size = n_samples // k
+    accuracy = 0
+    for i in range(k):
+        x_test = x[i * fold_size:(i + 1) * fold_size, :]
+        y_test = y[i * fold_size:(i + 1) * fold_size]
+        x_train = np.concatenate((x[:i * fold_size, :], x[(i + 1) * fold_size:, :]), axis=0)
+        y_train = np.concatenate((y[:i * fold_size], y[(i + 1) * fold_size:]), axis=0)
+        w_out, b_out = gradient_descent(x_train, y_train, w_in, b_in, learning_rate, iterations, regularization)
+        pr = predict(x_test, w_out, b_out)
+        accuracy += np.mean(pr == y_test) * 100 / k
+    return accuracy
 
+
+print('Train Accuracy: ', cross_validate(X, Y, k, learning_rate, iterations, regularization))
